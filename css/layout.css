@@ -1,0 +1,18 @@
+#app {
+  display: flex;
+  height: 100vh;
+}
+
+#sidebar {
+  width: 240px;
+  padding: 2rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+#view {
+  flex: 1;
+  padding: 2rem;
+  overflow-y: auto;
+}

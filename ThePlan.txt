@@ -1,0 +1,17 @@
+Core Features for Phase 1
+
+1: SPA routing (no page reloads)
+
+2: Sidebar navigation
+
+3: Dynamic view rendering
+
+4: Notes loaded from JSON
+
+5: Notes saved to localStorage
+
+6: Tag filtering
+
+7: Search functionality
+
+8: Subtle fade transition on route change
