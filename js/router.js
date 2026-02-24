@@ -1,4 +1,4 @@
-function router() {
+async function router() {
   let hash = window.location.hash;
 
   if (!hash) {
@@ -11,7 +11,7 @@ function router() {
       renderDashboard();
       break;
     case "#/notes":
-      renderNotes();
+      await renderNotes();
       break;
     case "#/playground":
       renderPlayground();

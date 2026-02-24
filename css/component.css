@@ -1,0 +1,38 @@
+.note-card {
+  background: #181a20;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  border: 1px solid #242730;
+  border-radius: 6px;
+}
+
+.note-card h3 {
+  margin-bottom: 0.5rem;
+}
+
+.tag {
+  background: #252830;
+  padding: 0.2rem 0.5rem;
+  margin-right: 0.4rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+}
+
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 2rem;
+}
+
+input, textarea, button {
+  padding: 0.5rem;
+  background: #181a20;
+  border: 1px solid #242730;
+  color: #e4e4e7;
+  border-radius: 4px;
+}
+
+button {
+  cursor: pointer;
+}

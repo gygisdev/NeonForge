@@ -3,6 +3,12 @@
     "id": 1,
     "title": "Flexbox Basics",
     "tags": ["css", "layout"],
-    "content": "display: flex allows..."
+    "content": "display: flex enables flexible layouts. justify-content aligns horizontally. align-items aligns vertically."
+  },
+  {
+    "id": 2,
+    "title": "Async JavaScript",
+    "tags": ["javascript"],
+    "content": "Async functions return promises. Await pauses execution until the promise resolves."
   }
 ]
