@@ -2,38 +2,35 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>NeonForge</title>
-
-  <link rel="stylesheet" href="./css/base.css" />
-  <link rel="stylesheet" href="./css/layout.css" />
-  <link rel="stylesheet" href="./css/theme.css" />
-  <link rel="stylesheet" href="./css/component.css" />
-  <link rel="modulepreload" href="./js/main.js" integrity="" crossorigin="anonymous" /> 
-  
+  <link rel="stylesheet" href="css/component.css" />
 </head>
 <body>
 
-  <div id="app">
-    <aside id="sidebar">
-      <h1 class="logo">NeonForge</h1>
+  <div class="app-container">
 
-      <nav>
-        <ul>
-          <li><a href="#/dashboard">Dashboard</a></li>
-          <li><a href="#/notes">Notes</a></li>
-          <li><a href="#/playground">Playground</a></li>
-          <li><a href="#/resources">Resources</a></li>
-          <li><a href="#/projects">Projects</a></li>
-        </ul>
-      </nav>
-    </aside>
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+  <h2 class="logo">NEON</h2>
 
-    <main id="view">
-      
+  <nav>
+    <ul>
+      <li data-view="dashboard" class="active">Dashboard</li>
+      <li data-view="notes">Notes</li>
+      <li data-view="playground">Playground</li>
+      <li data-view="projects">Projects</li>
+      <li data-view="resources">Resources</li>
+    </ul>
+  </nav>
+</aside>
+
+    <!-- MAIN CONTENT -->
+    <main class="main-content">
+  <div id="mainView"></div>
     </main>
+
   </div>
 
-  <script type="module" src="./js/main.js"></script>
+  <script src="js/main.js"></script>
 </body>
 </html>

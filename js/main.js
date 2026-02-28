@@ -1,155 +1,337 @@
-console.log("Main JS loaded");
+// =========================
+// STATE (Single Source of Truth)
+// =========================
 
-/* App State */
-const state = {
+let state = {
+  // data
   defaultNotes: [],
   userNotes: [],
-  notes: []
+  notes: [],
+
+  // notes filtering
+  filterText: "",
+  filterTag: "all",
+
+  // routing
+  activeView: "dashboard"
 };
 
-/* Storage Helper */
-const STORAGE_KEY = "neonforge_notes";
+// =========================
+// INITIALIZATION
+// =========================
 
-function saveNotesToStorage() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state.userNotes));
+async function init() {
+  loadLocalNotes();
+  await loadDefaultNotes();
+  attachSidebarHandlers();
+  render();
 }
 
-function loadNotesFromStorage() {
-  const stored = localStorage.getItem(STORAGE_KEY);
-  return stored ? JSON.parse(stored) : [];
+init();
+
+// =========================
+// LOAD DEFAULT JSON NOTES
+// =========================
+
+async function loadDefaultNotes() {
+  const response = await fetch("data/notes.json");
+  const data = await response.json();
+
+  state.defaultNotes = data.map(note => ({
+    ...note,
+    source: "json"
+  }));
+
+  combineNotes();
 }
 
-/* Where everything renders */
-const view = document.getElementById("view");
+// =========================
+// LOAD LOCAL NOTES
+// =========================
 
-/* Route controller */
-async function router() {
-  const hash = window.location.hash;
+function loadLocalNotes() {
+  const stored = localStorage.getItem("userNotes");
+  state.userNotes = stored ? JSON.parse(stored) : [];
+}
 
-  switch (hash) {
-    case "#/dashboard":
+// =========================
+// SAVE LOCAL NOTES
+// =========================
+
+function saveLocalNotes() {
+  localStorage.setItem("userNotes", JSON.stringify(state.userNotes));
+}
+
+// =========================
+// COMBINE NOTES
+// =========================
+
+function combineNotes() {
+  state.notes = [...state.defaultNotes, ...state.userNotes];
+}
+
+// =========================
+// FILTERING
+// =========================
+
+function getFilteredNotes() {
+  return state.notes.filter(note => {
+
+    const matchesText =
+      note.title.toLowerCase().includes(state.filterText.toLowerCase()) ||
+      note.content.toLowerCase().includes(state.filterText.toLowerCase());
+
+    const matchesTag =
+      state.filterTag === "all" || note.tag === state.filterTag;
+
+    return matchesText && matchesTag;
+  });
+}
+
+// =========================
+// RENDER
+// =========================
+
+function render() {
+  updateActiveSidebar();
+
+  switch (state.activeView) {
+    case "dashboard":
       renderDashboard();
       break;
-    case "#/notes":
+    case "notes":
       renderNotes();
       break;
-    case "#/playground":
+    case "playground":
       renderPlayground();
       break;
-    case "#/resources":
-      renderResources();
-      break;
-    case "#/projects":
+    case "projects":
       renderProjects();
       break;
-    default:
-      renderDashboard();
+    case "resources":
+      renderResources();
+      break;
   }
 }
 
-/* Temporary render functions */
 function renderDashboard() {
-  view.innerHTML = `
-    <h2>Dashboard</h2>
-    <p>Welcome to your dev operating system.</p>
-  `;
-}
+  const container = document.getElementById("mainView");
 
-async function renderNotes() {
-    console.log("renderNotes running");
-  if (state.defaultNotes.length === 0) {
-  const response = await fetch("./data/notes.json");
-  state.defaultNotes = await response.json();
-}
+  container.innerHTML = `
+    <h1><span id="terminalTitle"></span></h1>
 
-state.userNotes = loadNotesFromStorage();
-
-state.notes = [...state.defaultNotes, ...state.userNotes];
-  
-
-  view.innerHTML = `
-    <h2>Notes</h2>
-
-    <form id="note-form">
-      <input type="text" id="note-title" placeholder="Title" required />
-      <input type="text" id="note-tags" placeholder="Tags (comma separated)" />
-      <textarea id="note-content" placeholder="Content" required></textarea>
-      <button type="submit">Add Note</button>
-    </form>
-
-    <div class="notes-container"></div>
-  `;
-  renderNotesList();
-attachNoteFormHandler();
-}
-  function renderNotesList() {
-  const container = document.querySelector(".notes-container");
-  container.innerHTML = "";
-
-  state.notes.forEach(note => {
-    const noteElement = document.createElement("div");
-    noteElement.classList.add("note-card");
-
-    noteElement.innerHTML = `
-      <h3>${note.title}</h3>
-      <p>${note.content}</p>
-      <div class="tags">
-        ${note.tags.map(tag => `<span class="tag">${tag}</span>`).join("")}
+    <div class="dashboard-grid">
+      <div class="dashboard-card">
+        <h3>Total Notes</h3>
+        <p>${state.notes.length}</p>
       </div>
-    `;
 
-    container.appendChild(noteElement);
-    console.log("About to attach form handler");
-  });
+      <div class="dashboard-card">
+        <h3>User Notes</h3>
+        <p>${state.userNotes.length}</p>
+      </div>
+
+      <div class="dashboard-card">
+        <h3>JSON Notes</h3>
+        <p>${state.defaultNotes.length}</p>
+      </div>
+    </div>
+  `;
+  typeTerminalText("terminalTitle", "Dashboard");
 }
-  function attachNoteFormHandler() {
-    console.log("attachNoteFormHandler running");
-      const form = document.getElementById("note-form");
-  
-      form.addEventListener("submit", function (e) {
-      e.preventDefault();
 
-    const title = document.getElementById("note-title").value;
-    const tagsInput = document.getElementById("note-tags").value;
-    const content = document.getElementById("note-content").value;
+function typeTerminalText(elementId, text) {
+  const el = document.getElementById(elementId);
+  if (!el) return;
 
-    const newNote = {
-      id: Date.now(),
-      title,
-      content,
-      tags: tagsInput.split(",").map(tag => tag.trim()).filter(Boolean)
-    };
+  el.textContent = "";
+  let index = 0;
 
-    state.userNotes.push(newNote);
-    state.notes = [...state.defaultNotes, ...state.userNotes];
+  function type() {
+    if (index < text.length) {
+      el.textContent += text.charAt(index);
+      index++;
+      setTimeout(type, 40);
+    }
+  }
 
-    saveNotesToStorage();
-    renderNotesList();
-    form.reset();
+  type();
+}
+
+function renderNotes() {
+  const container = document.getElementById("mainView");
+
+  container.innerHTML = `
+    <h1><span id="notesTitle"></span></h1>
+
+    <section class="controls">
+      <input type="text" id="searchInput" placeholder="Search notes..." />
+      <select id="tagFilter">
+        <option value="all">All</option>
+        <option value="javascript">JavaScript</option>
+        <option value="css">CSS</option>
+        <option value="html">HTML</option>
+      </select>
+    </section>
+
+    <section class="note-form-section">
+      <form id="noteForm">
+        <input type="text" id="noteTitle" placeholder="Title" required />
+        <textarea id="noteContent" placeholder="Write your note..." required></textarea>
+        <select id="noteTag">
+          <option value="javascript">JavaScript</option>
+          <option value="css">CSS</option>
+          <option value="html">HTML</option>
+        </select>
+        <button type="submit">Add Note</button>
+      </form>
+    </section>
+
+    <section id="notesContainer" class="notes-grid"></section>
+  `;
+
+  attachFormHandler();
+  attachFilterHandlers();
+  attachNotesControls();
+  renderNotesGrid();
+  typeTerminalText("notesTitle", "Notes");
+}
+
+function attachNotesControls() {
+  const deleteButtons = document.querySelectorAll(".delete-note");
+
+  deleteButtons.forEach(btn => {
+    btn.addEventListener("click", function () {
+      const id = this.dataset.id;
+      deleteNote(id);
+    });
   });
 }
 
 function renderPlayground() {
-  view.innerHTML = `
-    <h2>Playground</h2>
-    <p>Experimental zone.</p>
-  `;
-}
+  const container = document.getElementById("mainView");
 
-function renderResources() {
-  view.innerHTML = `
-    <h2>Resources</h2>
-    <p>Curated links and tools.</p>
+  container.innerHTML = `
+    <h1><span id="playgroundTitle"></span></h1>
+    <p>Use this space to test ideas.</p>
   `;
+  typeTerminalText("playgroundTitle", "Playground");
 }
 
 function renderProjects() {
-  view.innerHTML = `
-    <h2>Projects</h2>
-    <p>What you've built.</p>
-  `; 
+  const container = document.getElementById("mainView");
+
+  container.innerHTML = `
+    <h1><span id="projectsTitle"></span></h1>
+    <p>Project tracking system coming soon.</p>
+  `;
+  typeTerminalText("projectsTitle", "Projects");
 }
 
-/* Listen for route changes */
-window.addEventListener("hashchange", router);
-window.addEventListener("load", router);
+function renderResources() {
+  const container = document.getElementById("mainView");
+
+  container.innerHTML = `
+    <h1><span id="resourcesTitle"></span></h1>
+    <p>Curated dev resources and links.</p>
+  `;
+  typeTerminalText("resourcesTitle", "Resources");
+}
+
+function renderNotesGrid() {
+  const container = document.getElementById("notesContainer");
+  if (!container) return;
+
+  const filtered = getFilteredNotes();
+
+  container.innerHTML = filtered.map(note => `
+    <div class="note-card">
+      <h3>${note.title}</h3>
+      <p>${note.content}</p>
+      <span class="tag">${note.tag}</span>
+
+      ${note.source === "local" ? 
+        `<button class="delete-note" data-id="${note.id}">Delete</button>` 
+        : ""
+      }
+    </div>
+  `).join("");
+
+  attachNotesControls();
+}
+
+// =========================
+// FORM HANDLER
+// =========================
+
+function attachFormHandler() {
+  const form = document.getElementById("noteForm");
+  if (!form) return;
+
+  form.addEventListener("submit", (e) => {
+    e.preventDefault();
+
+    const title = document.getElementById("noteTitle").value;
+    const content = document.getElementById("noteContent").value;
+    const tag = document.getElementById("noteTag").value;
+
+    const newNote = {
+      id: Date.now().toString(),
+      title,
+      content,
+      tag,
+      source: "local"
+    };
+
+    state.userNotes.push(newNote);
+    saveLocalNotes();
+    combineNotes();
+
+    form.reset();
+  });
+}
+
+// =========================
+// FILTER HANDLERS
+// =========================
+
+function attachFilterHandlers() {
+  document.getElementById("searchInput")
+    .addEventListener("input", (e) => {
+      state.filterText = e.target.value;
+      renderNotesGrid();
+    });
+
+  document.getElementById("tagFilter")
+    .addEventListener("change", (e) => {
+      state.filterTag = e.target.value;
+      renderNotesGrid();
+    });
+}
+
+// =========================
+// Sidebar Handlers
+// =========================
+
+function attachSidebarHandlers() {
+  console.log("Attaching sidebar handlers");
+  const items = document.querySelectorAll(".sidebar li");
+
+  items.forEach(item => {
+    item.addEventListener("click", () => {
+      console.log("Clicked:", item.dataset.view);
+      state.activeView = item.dataset.view;
+      render();
+    });
+  });
+}
+
+function updateActiveSidebar() {
+  document.querySelectorAll(".sidebar li").forEach(li => {
+    li.classList.remove("active");
+
+    if (li.dataset.view === state.activeView) {
+      li.classList.add("active");
+    }
+  });
+}

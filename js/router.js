@@ -1,28 +1,21 @@
-async function router() {
-  let hash = window.location.hash;
+function render() {
+  updateActiveSidebar();
 
-  if (!hash) {
-    hash = "#/dashboard";
-    window.location.hash = hash;
-  }
-
-  switch (hash) {
-    case "#/dashboard":
+  switch (state.activeView) {
+    case "dashboard":
       renderDashboard();
       break;
-    case "#/notes":
-      await renderNotes();
+    case "notes":
+      renderNotes();
       break;
-    case "#/playground":
+    case "playground":
       renderPlayground();
       break;
-    case "#/resources":
-      renderResources();
-      break;
-    case "#/projects":
+    case "projects":
       renderProjects();
       break;
-    default:
-      renderDashboard();
+    case "resources":
+      renderResources();
+      break;
   }
 }
