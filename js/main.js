@@ -8,6 +8,11 @@ let state = {
   userNotes: [],
   notes: [],
 
+  playground: {
+  liveMode: true,
+  theme: "light"
+},
+
   // notes filtering
   filterText: "",
   filterTag: "all",
@@ -15,6 +20,57 @@ let state = {
   // routing
   activeView: "dashboard"
 };
+
+// =========================
+// Initialize Monaco
+// =========================
+
+let htmlEditor, cssEditor, jsEditor;
+
+function initMonacoEditors() {
+  require.config({
+    paths: { vs: "https://unpkg.com/monaco-editor@0.45.0/min/vs" }
+  });
+
+  require(["vs/editor/editor.main"], function () {
+
+    htmlEditor = monaco.editor.create(
+      document.getElementById("htmlEditor"),
+      {
+        value: "<h2>Hello Dev</h2>",
+        language: "html",
+        theme: "vs-dark",
+        automaticLayout: true,
+        minimap: { enabled: false }
+      }
+    );
+
+    cssEditor = monaco.editor.create(
+      document.getElementById("cssEditor"),
+      {
+        value: "h2 { color: cyan; }",
+        language: "css",
+        theme: "vs-dark",
+        automaticLayout: true,
+        minimap: { enabled: false }
+      }
+    );
+
+    jsEditor = monaco.editor.create(
+      document.getElementById("jsEditor"),
+      {
+        value: 'console.log("Playground ready");',
+        language: "javascript",
+        theme: "vs-dark",
+        automaticLayout: true,
+        minimap: { enabled: false }
+      }
+    );
+
+    attachPlaygroundHandlers();
+    updatePreview();
+  });
+}
 
 // =========================
 // INITIALIZATION
@@ -213,8 +269,35 @@ function renderPlayground() {
 
   container.innerHTML = `
     <h1><span id="playgroundTitle"></span></h1>
-    <p>Use this space to test ideas.</p>
+
+    <div class="playground-toolbar">
+      <button id="runBtn">Run</button>
+      <button id="liveToggle">Live: ON</button>
+      <button id="saveSnippet">Save</button>
+      <button id="prettifyBtn">Prettify</button>
+      <button id="themeToggle">Preview: Light</button>
+    </div>
+
+    <div class="playground-container">
+
+      <div class="editor-panel">
+        <div id="htmlEditor" class="editor"></div>
+        <div id="cssEditor" class="editor"></div>
+        <div id="jsEditor" class="editor"></div>
+      </div>
+
+      <div class="preview-panel">
+        <iframe id="previewFrame"></iframe>
+        <div class="console-panel">
+          <h4>Console</h4>
+          <div id="consoleOutput"></div>
+        </div>
+      </div>
+
+    </div>
   `;
+
+  initMonacoEditors();
   typeTerminalText("playgroundTitle", "Playground");
 }
 
@@ -334,4 +417,133 @@ function updateActiveSidebar() {
       li.classList.add("active");
     }
   });
+}
+
+// =========================
+// Playground Handlers
+// =========================
+
+function attachPlaygroundHandlers() {
+  const htmlEditor = document.getElementById("htmlEditor");
+  const cssEditor = document.getElementById("cssEditor");
+  const jsEditor = document.getElementById("jsEditor");
+
+  const runBtn = document.getElementById("runBtn");
+  const liveToggle = document.getElementById("liveToggle");
+  const saveBtn = document.getElementById("saveSnippet");
+  const prettifyBtn = document.getElementById("prettifyBtn");
+  const themeToggle = document.getElementById("themeToggle");
+
+  [htmlEditor, cssEditor, jsEditor].forEach(editor => {
+    editor.addEventListener("input", () => {
+      if (state.playground.liveMode) updatePreview();
+    });
+  });
+
+  runBtn.addEventListener("click", updatePreview);
+
+  liveToggle.addEventListener("click", () => {
+    state.playground.liveMode = !state.playground.liveMode;
+    liveToggle.textContent = "Live: " + (state.playground.liveMode ? "ON" : "OFF");
+  });
+
+  saveBtn.addEventListener("click", saveSnippet);
+
+  prettifyBtn.addEventListener("click", prettifyEditors);
+
+  themeToggle.addEventListener("click", () => {
+    state.playground.theme =
+      state.playground.theme === "light" ? "dark" : "light";
+
+    themeToggle.textContent =
+      "Preview: " +
+      (state.playground.theme === "light" ? "Light" : "Dark");
+
+    updatePreview();
+  });
+}
+
+function updatePreview() {
+  const html = htmlEditor.getValue();
+  const css = cssEditor.getValue();
+  const js = jsEditor.getValue();
+
+  const iframe = document.getElementById("previewFrame");
+  const consoleOutput = document.getElementById("consoleOutput");
+  consoleOutput.innerHTML = "";
+
+  const fullCode = `
+    <html>
+      <head>
+        <style>${css}</style>
+      </head>
+      <body>
+        ${html}
+        <script>
+          const originalLog = console.log;
+          console.log = function(...args) {
+            parent.postMessage(
+              { type: "console", message: args.join(" ") },
+              "*"
+            );
+            originalLog.apply(console, args);
+          };
+
+          try {
+            ${js}
+          } catch (error) {
+            parent.postMessage(
+              { type: "console", message: error.toString() },
+              "*"
+            );
+          }
+        <\/script>
+      </body>
+    </html>
+  `;
+
+  iframe.srcdoc = fullCode;
+
+  window.addEventListener("message", (event) => {
+  if (event.data.type === "console") {
+    const consoleOutput = document.getElementById("consoleOutput");
+    const line = document.createElement("div");
+    line.textContent = event.data.message;
+    consoleOutput.appendChild(line);
+  }
+});
+}
+
+function saveSnippet() {
+  const snippet = {
+    html: htmlEditor.value,
+    css: cssEditor.value,
+    js: jsEditor.value
+  };
+
+  localStorage.setItem("playgroundSnippet", JSON.stringify(snippet));
+}
+
+function loadSnippet() {
+  const saved = localStorage.getItem("playgroundSnippet");
+  if (!saved) return;
+
+  const snippet = JSON.parse(saved);
+  htmlEditor.value = snippet.html;
+  cssEditor.value = snippet.css;
+  jsEditor.value = snippet.js;
+}
+
+function prettifyEditors() {
+  htmlEditor.value = formatCode(htmlEditor.value);
+  cssEditor.value = formatCode(cssEditor.value);
+  jsEditor.value = formatCode(jsEditor.value);
+}
+
+function formatCode(code) {
+  return code
+    .replace(/;\s*/g, ";\n")
+    .replace(/{\s*/g, "{\n")
+    .replace(/}\s*/g, "\n}\n")
+    .trim();
 }
