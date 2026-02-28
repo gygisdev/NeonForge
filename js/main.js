@@ -174,6 +174,7 @@ function renderDashboard() {
   const container = document.getElementById("mainView");
 
   container.innerHTML = `
+  <div class="content-wrapper">
     <h1><span id="terminalTitle"></span></h1>
 
     <div class="dashboard-grid">
@@ -192,6 +193,7 @@ function renderDashboard() {
         <p>${state.defaultNotes.length}</p>
       </div>
     </div>
+  </div>
   `;
   typeTerminalText("terminalTitle", "Dashboard");
 }
@@ -218,6 +220,7 @@ function renderNotes() {
   const container = document.getElementById("mainView");
 
   container.innerHTML = `
+  <div class="content-wrapper">
     <h1><span id="notesTitle"></span></h1>
 
     <section class="controls">
@@ -244,6 +247,7 @@ function renderNotes() {
     </section>
 
     <section id="notesContainer" class="notes-grid"></section>
+  </div>
   `;
 
   attachFormHandler();
@@ -254,20 +258,29 @@ function renderNotes() {
 }
 
 function attachNotesControls() {
-  const deleteButtons = document.querySelectorAll(".delete-note");
+  const container = document.getElementById("notesContainer");
+  if (!container) return;
 
-  deleteButtons.forEach(btn => {
-    btn.addEventListener("click", function () {
-      const id = this.dataset.id;
-      deleteNote(id);
-    });
+  container.addEventListener("click", (e) => {
+    if (e.target.classList.contains("delete-note")) {
+      deleteNote(e.target.dataset.id);
+    }
   });
+}
+
+function deleteNote(id) {
+  state.userNotes = state.userNotes.filter(note => note.id !== id);
+
+  saveLocalNotes();
+  combineNotes();
+  renderNotesGrid();
 }
 
 function renderPlayground() {
   const container = document.getElementById("mainView");
 
   container.innerHTML = `
+  <div class="content-wrapper">
     <h1><span id="playgroundTitle"></span></h1>
 
     <div class="playground-toolbar">
@@ -295,6 +308,7 @@ function renderPlayground() {
       </div>
 
     </div>
+  </div>
   `;
 
   initMonacoEditors();
@@ -305,8 +319,10 @@ function renderProjects() {
   const container = document.getElementById("mainView");
 
   container.innerHTML = `
+  <div class="content-wrapper">
     <h1><span id="projectsTitle"></span></h1>
     <p>Project tracking system coming soon.</p>
+  </div>
   `;
   typeTerminalText("projectsTitle", "Projects");
 }
@@ -315,8 +331,10 @@ function renderResources() {
   const container = document.getElementById("mainView");
 
   container.innerHTML = `
+  <div class="content-wrapper">
     <h1><span id="resourcesTitle"></span></h1>
     <p>Curated dev resources and links.</p>
+  </div>
   `;
   typeTerminalText("resourcesTitle", "Resources");
 }
@@ -333,14 +351,12 @@ function renderNotesGrid() {
       <p>${note.content}</p>
       <span class="tag">${note.tag}</span>
 
-      ${note.source === "local" ? 
-        `<button class="delete-note" data-id="${note.id}">Delete</button>` 
+      ${note.source === "local" 
+        ? `<button class="delete-note" data-id="${note.id}">Delete</button>` 
         : ""
       }
     </div>
   `).join("");
-
-  attachNotesControls();
 }
 
 // =========================
@@ -371,6 +387,14 @@ function attachFormHandler() {
     combineNotes();
 
     form.reset();
+
+    state.filterText = "";
+    state.filterTag = "all";
+
+    document.getElementById("searchInput").value = "";
+    document.getElementById("tagFilter").value = "all";
+
+    renderNotesGrid();
   });
 }
 
@@ -435,10 +459,10 @@ function attachPlaygroundHandlers() {
   const themeToggle = document.getElementById("themeToggle");
 
   [htmlEditor, cssEditor, jsEditor].forEach(editor => {
-    editor.addEventListener("input", () => {
-      if (state.playground.liveMode) updatePreview();
-    });
+  editor.onDidChangeModelContent(() => {
+    if (state.playground.liveMode) updatePreview();
   });
+});
 
   runBtn.addEventListener("click", updatePreview);
 
@@ -503,8 +527,9 @@ function updatePreview() {
   `;
 
   iframe.srcdoc = fullCode;
+}
 
-  window.addEventListener("message", (event) => {
+window.addEventListener("message", (event) => {
   if (event.data.type === "console") {
     const consoleOutput = document.getElementById("consoleOutput");
     const line = document.createElement("div");
@@ -512,13 +537,12 @@ function updatePreview() {
     consoleOutput.appendChild(line);
   }
 });
-}
 
 function saveSnippet() {
   const snippet = {
-    html: htmlEditor.value,
-    css: cssEditor.value,
-    js: jsEditor.value
+    html: htmlEditor.getValuevalue,
+    css: cssEditor.getValuevalue,
+    js: jsEditor.getValuevalue
   };
 
   localStorage.setItem("playgroundSnippet", JSON.stringify(snippet));
@@ -529,15 +553,16 @@ function loadSnippet() {
   if (!saved) return;
 
   const snippet = JSON.parse(saved);
-  htmlEditor.value = snippet.html;
-  cssEditor.value = snippet.css;
-  jsEditor.value = snippet.js;
+
+  htmlEditor.setValue = snippet.html;
+  cssEditor.setValue = snippet.css;
+  jsEditor.setValue = snippet.js;
 }
 
 function prettifyEditors() {
-  htmlEditor.value = formatCode(htmlEditor.value);
-  cssEditor.value = formatCode(cssEditor.value);
-  jsEditor.value = formatCode(jsEditor.value);
+  htmlEditor.setValue(formatCode(htmlEditor.getValue()));
+  cssEditor.setValue(formatCode(cssEditor.getValue()));
+  jsEditor.setValue(formatCode(jsEditor.getValue()));
 }
 
 function formatCode(code) {
